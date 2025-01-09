@@ -20,22 +20,36 @@ export function createExpressAdapter(config: RestQLConfig): ExpressAdapter {
 
   return {
     async toSQL(req: Request) {
-      const method = req.method;
+      let method = req.method;
       let queryOptions = {};
-
-      // Parse query parameters
-      if (req.query.q) {
-        try {
-          const decodedQuery = decodeQuery(req.query.q as string);
-          validateQuery(decodedQuery);
-          queryOptions = decodedQuery;
-        } catch (error) {
-          if (error instanceof QueryValidationError) {
-            throw error;
+      
+      if (method === 'POST' && req.headers['content-type'] === 'application/json') {
+        // Handle JSON payload in POST request
+        if (req.body && req.body.action && req.body.query) {
+          try {
+            validateQuery(req.body.query);
+            queryOptions = req.body.query;
+            method = req.body.action;
+          } catch (error) {
+            if (error instanceof QueryValidationError) {
+              throw error;
+            }
+            throw new QueryValidationError(error instanceof Error ? error.message : "Unknown error");
           }
-          throw new QueryValidationError(
-            error instanceof Error ? error.message : "Unknown error"
-          );
+        }
+      } else {
+        // Handle query string parameter
+        if (req.query.q) {
+          try {
+            const decodedQuery = decodeQuery(req.query.q as string);
+            validateQuery(decodedQuery);
+            queryOptions = decodedQuery;
+          } catch (error) {
+            if (error instanceof QueryValidationError) {
+              throw error;
+            }
+            throw new QueryValidationError(error instanceof Error ? error.message : "Unknown error");
+          }
         }
       }
 

@@ -72,6 +72,78 @@ const { sql, params } = await adapter.toSQL(request);
 // SQL: SELECT "id", "name", "email" FROM "users" WHERE "age" > $1 AND "status" = $2
 // Params: [18, 'active']
 ```
+### Alternative Request Method: JSON Payload
+
+In addition to the standard query string method, RestQL-TS offers an alternative approach for sending requests using JSON payloads via POST requests. This can be particularly useful when dealing with complex queries or when you prefer to organize your request data within a structured JSON format. This method is entirely optional and does not replace the existing query string functionality, which continues to be fully supported.
+
+#### JSON Payload Structure
+
+When using the JSON payload method, the request body should be structured as follows:
+```json 
+{
+   "action": "get/delete/post/put", 
+   "query": { // query options and parameters, such as select, where, joins, etc. } 
+}
+```
+*   **`action`**: This field indicates the desired operation or method that should be performed.
+*   **`query`**: This field contains the query parameters and options.
+
+#### Example Usage
+
+Here's an example of how to use the JSON payload method:
+```typescript 
+import { createWebAdapter } from "restql-ts/adapters/web";
+
+const adapter = createWebAdapter({ dialect: "postgres", });
+
+// Example of a POST request with a JSON payload const request = new 
+const request = new Request(
+  "http://api.example.com/users",
+  { 
+    method: "POST", 
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(
+      { 
+        action: "get", 
+        query: { 
+          select: ["id", "name", "email"], 
+          where: { 
+            operator: "AND", 
+            conditions: [ 
+              { field: "age", operator: ">", value: 18 }, 
+              { field: "status", operator: "=", value: "active" }, 
+            ], 
+          }, 
+        }, 
+      })
+  },
+);
+
+const { sql, params } = await adapter.toSQL(request); // SQL: SELECT "id", "name", "email" FROM "users" WHERE "age" > $1 AND "status" = $2 // Params: [18, 'active']
+```
+
+In this example:
+*   A POST request is made to `http://api.example.com/users`.
+*   The request body is a JSON string.
+*   The `action` is set to `"get"` to perform a select operation.
+* the query has all the other options that are desired.
+
+This approach provides a clean and organized way to handle more complex queries, keeping the URL simple and the request body structured.
+
+#### When to use JSON Payload?
+
+You may prefer to use the JSON payload method in the following scenarios:
+
+*   **Complex Queries:** When dealing with deeply nested conditions or a large number of parameters.
+*   **Improved Readability:** When you want to organize your query in a human-readable and structured format.
+* **When you want to use POST** : Some times for security reasons sending information in the URL may not be desired.
+*   **Security**: When you don't want to have query params in the URL
+*   **Large paylaods:** the URL can only carry limited amount of data, so to pass large payloads it is desired to use post.
+
+#### Continued Support for Query Strings
+
+Remember, the original query string method, using the `q` parameter, is still fully supported and can be used interchangeably with the JSON payload method.
+
 
 ### Express Integration
 

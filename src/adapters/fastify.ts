@@ -20,7 +20,7 @@ export function createFastifyAdapter(config: RestQLConfig): FastifyAdapter {
 
   return {
     async toSQL(req: FastifyRequest) {
-      const method = req.method;
+      let method = req.method;
       let queryOptions = {};
 
       // Parse query parameters
@@ -37,6 +37,22 @@ export function createFastifyAdapter(config: RestQLConfig): FastifyAdapter {
           throw new QueryValidationError(
             error instanceof Error ? error.message : "Unknown error"
           );
+        }
+      }
+      // Parse JSON body for POST requests
+      else if (method === "POST" && req.body && typeof req.body === "object") {
+        const body = req.body as Record<string, any>;
+        if (body.action && body.query && body.action) {
+          try {
+            validateQuery(body.query);
+            queryOptions = body.query;
+            method = body.action;
+          } catch (error) {
+            if (error instanceof QueryValidationError) {
+              throw error;
+            }
+            throw new QueryValidationError(error instanceof Error ? error.message : "Unknown error");
+          }
         }
       }
 

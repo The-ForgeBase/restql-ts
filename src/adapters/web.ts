@@ -14,14 +14,14 @@ export interface WebAdapter {
   toSQL(req: Request): Promise<{ sql: string; params: any[] }>;
 }
 
-export function createWebAdapter(config: RestQLConfig): WebAdapter {
+export function createWebAdapter(config: RestQLConfig, enableJsonPayloads = false): WebAdapter {
   const restql = createRestQL(config);
 
   return {
     async toSQL(req: Request) {
       const url = new URL(req.url);
-      const method = req.method;
-      let queryOptions = {};
+      let method = req.method;
+      let queryOptions: any = {};
 
       // Parse query parameters
       if (url.searchParams.has("q")) {
@@ -41,11 +41,27 @@ export function createWebAdapter(config: RestQLConfig): WebAdapter {
       }
 
       // Parse body if present
-      let body;
-      if (method !== "GET" && method !== "HEAD") {
-        const contentType = req.headers.get("content-type");
-        if (contentType?.includes("application/json")) {
-          body = await req.json();
+      let body: any;
+      if (enableJsonPayloads && method !== "GET" && method !== "HEAD") {
+        try {
+          const contentType = req.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            body = await req.json();
+
+            // Use action from JSON payload as query if present
+            if (body && body.query && body.action) {
+              validateQuery(body.query);
+              queryOptions = body.query;
+              method = body.action;
+            }
+          }
+        } catch (error) {
+          if (error instanceof QueryValidationError) {
+            throw error;
+          }
+          throw new QueryValidationError(
+            error instanceof Error ? error.message : "Unknown error"
+          );
         }
       }
 
