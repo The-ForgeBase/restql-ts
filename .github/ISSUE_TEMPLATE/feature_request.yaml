@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose and discuss future improvements to Authora
+title: "[Feature Request]: "
+labels: ["feature request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - surreal-query
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true

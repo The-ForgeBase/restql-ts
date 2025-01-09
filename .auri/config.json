@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/The-ForgeBase/restql-ts",
+  "scripts": {
+    "format": "pnpm format"
+  },
+  "debug": true
+}
