@@ -15,40 +15,59 @@ export interface ExpressAdapter {
   toSQL(req: Request): Promise<{ sql: string; params: any[] }>;
 }
 
-export function createExpressAdapter(config: RestQLConfig): ExpressAdapter {
+export function createExpressAdapter(
+  config: RestQLConfig,
+  { enableJsonPayloads = false }: { enableJsonPayloads?: boolean } = {}
+): ExpressAdapter {
   const restql = createRestQL(config);
 
   return {
     async toSQL(req: Request) {
       let method = req.method;
       let queryOptions = {};
-      
-      if (method === 'POST' && req.headers['content-type'] === 'application/json') {
-        // Handle JSON payload in POST request
-        if (req.body && req.body.action && req.body.query) {
-          try {
-            validateQuery(req.body.query);
-            queryOptions = req.body.query;
-            method = req.body.action;
-          } catch (error) {
-            if (error instanceof QueryValidationError) {
-              throw error;
-            }
-            throw new QueryValidationError(error instanceof Error ? error.message : "Unknown error");
+
+      // Handle query string parameter
+      if (req.query && req.query.q) {
+        try {
+          const decodedQuery = decodeQuery(req.query.q as string);
+          validateQuery(decodedQuery);
+          queryOptions = decodedQuery;
+        } catch (error) {
+          if (error instanceof QueryValidationError) {
+            throw error;
           }
+          throw new QueryValidationError(
+            error instanceof Error ? error.message : "Unknown error"
+          );
         }
-      } else {
-        // Handle query string parameter
-        if (req.query.q) {
+      }
+      let body: any;
+
+      if (method !== "GET" && method !== "HEAD") {
+        body = req.body as any;
+        try {
+          body = JSON.parse(body);
+        } catch (error) {
+          // throw new QueryValidationError("Invalid JSON payload");
+        }
+      }
+
+      if (method === "POST" && enableJsonPayloads && body) {
+        // Handle JSON payload in POST request
+        // console.log("body", body);
+        if (body.query && (body.action == "get" || body.action == "GET")) {
           try {
-            const decodedQuery = decodeQuery(req.query.q as string);
-            validateQuery(decodedQuery);
-            queryOptions = decodedQuery;
+            validateQuery(body.query);
+            queryOptions = body.query;
+            method = body.action.toUpperCase();
+            body = {};
           } catch (error) {
             if (error instanceof QueryValidationError) {
               throw error;
             }
-            throw new QueryValidationError(error instanceof Error ? error.message : "Unknown error");
+            throw new QueryValidationError(
+              error instanceof Error ? error.message : "Unknown error"
+            );
           }
         }
       }
@@ -57,7 +76,7 @@ export function createExpressAdapter(config: RestQLConfig): ExpressAdapter {
         method: method as any,
         path: req.path,
         query: queryOptions,
-        body: req.body,
+        body: body,
       };
 
       return restql.toSQL(restQLRequest);

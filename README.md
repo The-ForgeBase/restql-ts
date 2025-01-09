@@ -72,6 +72,7 @@ const { sql, params } = await adapter.toSQL(request);
 // SQL: SELECT "id", "name", "email" FROM "users" WHERE "age" > $1 AND "status" = $2
 // Params: [18, 'active']
 ```
+
 ### Alternative Request Method: JSON Payload
 
 In addition to the standard query string method, RestQL-TS offers an alternative approach for sending requests using JSON payloads via POST requests. This can be particularly useful when dealing with complex queries or when you prefer to organize your request data within a structured JSON format. This method is entirely optional and does not replace the existing query string functionality, which continues to be fully supported.
@@ -79,54 +80,148 @@ In addition to the standard query string method, RestQL-TS offers an alternative
 #### JSON Payload Structure
 
 When using the JSON payload method, the request body should be structured as follows:
-```json 
+
+```json
 {
-   "action": "get/delete/post/put", 
-   "query": { // query options and parameters, such as select, where, joins, etc. } 
+   "action": "get", // this action is only needed when using the JSON payload method for get requests i.e for select operations
+   "query": { // query options and parameters, such as select, where, joins, etc. }
 }
 ```
-*   **`action`**: This field indicates the desired operation or method that should be performed.
-*   **`query`**: This field contains the query parameters and options.
 
-#### Example Usage
+- **`action`**: This field indicates the desired operation or method that should be performed (this is only used for the query, not the method of the request).
+- **`query`**: This field contains the query parameters and options.
 
-Here's an example of how to use the JSON payload method:
-```typescript 
+### Mutations (POST/PUT/DELETE) (this works with both JSON Payload and Normal Request)
+
+For mutations (POST/PUT/DELETE), the request body should be structured as follows:
+
+```json
+[
+  { "id": 1, "status": "active" },
+  { "id": 2, "status": "inactive" }
+]
+```
+
+For single update requests, the request body should be structured as follows:
+
+```json
+{ "id": 1, "status": "active" }
+```
+
+- **`id`**: The id of the record to be updated.
+- **`status`**: The new status of the record.
+
+The above is an example of a bulk update request.
+
+For bulk delete requests, the request body should be structured as follows:
+
+```json
+[{ "id": 1 }, { "id": 2 }]
+```
+
+For single delete requests, the request body should be structured as follows:
+
+```json
+{ "id": 1 }
+```
+
+For single insert requests, the request body should be structured as follows:
+
+```json
+{ "id": 1, "name": "John", "email": "john@example.com" }
+```
+
+For bulk insert requests, the request body should be structured as follows:
+
+```json
+[
+  { "id": 1, "name": "John", "email": "john@example.com" },
+  { "id": 2, "name": "Jane", "email": "jane@example.com" }
+]
+```
+
+### Example using JSON Payload for Mutations
+
+```typescript
 import { createWebAdapter } from "restql-ts/adapters/web";
 
-const adapter = createWebAdapter({ dialect: "postgres", });
-
-// Example of a POST request with a JSON payload const request = new 
-const request = new Request(
-  "http://api.example.com/users",
-  { 
-    method: "POST", 
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(
-      { 
-        action: "get", 
-        query: { 
-          select: ["id", "name", "email"], 
-          where: { 
-            operator: "AND", 
-            conditions: [ 
-              { field: "age", operator: ">", value: 18 }, 
-              { field: "status", operator: "=", value: "active" }, 
-            ], 
-          }, 
-        }, 
-      })
-  },
+const adapter = createWebAdapter(
+  { dialect: "postgres" },
+  { enableJsonPayloads: true }
 );
+
+const request = new Request("http://api.example.com/users", {
+  method: "POST", // the method should always be POST/PUT/DELETE
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify([
+    { id: 1, status: "active" },
+    { id: 2, status: "inactive" },
+  ]),
+});
+```
+
+### Example using Normal Request for Mutations
+
+```typescript
+import { createWebAdapter } from "restql-ts/adapters/web";
+
+const adapter = createWebAdapter({ dialect: "postgres" });
+
+const request = new Request("http://api.example.com/users", {
+  method: "POST", // the method should always be POST/PUT/DELETE
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify([
+    { id: 1, status: "active" },
+    { id: 2, status: "inactive" },
+  ]),
+});
+```
+
+### Recommended Usage
+
+- **`JSON Payload`**: Use this method for complex queries or if you prefer to organize your select query in a human-readable and structured format.
+- **`Normal Request`**: Use this method for mutations.
+
+#### Example Usage (JSON Payload) for Select Queries
+
+Here's an example of how to use the JSON payload method for select queries:
+
+```typescript
+import { createWebAdapter } from "restql-ts/adapters/web";
+
+const adapter = createWebAdapter(
+  { dialect: "postgres" },
+  { enableJsonPayloads: true }
+);
+
+// Example of a POST request with a JSON payload const request = new
+const request = new Request("http://api.example.com/users", {
+  method: "POST", // the method should always be POST
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    action: "get",
+    query: {
+      select: ["id", "name", "email"],
+      where: {
+        operator: "AND",
+        conditions: [
+          { field: "age", operator: ">", value: 18 },
+          { field: "status", operator: "=", value: "active" },
+        ],
+      },
+    },
+  }),
+});
 
 const { sql, params } = await adapter.toSQL(request); // SQL: SELECT "id", "name", "email" FROM "users" WHERE "age" > $1 AND "status" = $2 // Params: [18, 'active']
 ```
 
 In this example:
-*   A POST request is made to `http://api.example.com/users`.
-*   The request body is a JSON string.
-*   The `action` is set to `"get"` to perform a select operation.
-* the query has all the other options that are desired.
+
+- A POST request is made to `http://api.example.com/users`.
+- The request body is a JSON string.
+- The `action` is set to `"get"` to perform a select operation.
+- the query has all the other options that are desired.
 
 This approach provides a clean and organized way to handle more complex queries, keeping the URL simple and the request body structured.
 
@@ -134,16 +229,15 @@ This approach provides a clean and organized way to handle more complex queries,
 
 You may prefer to use the JSON payload method in the following scenarios:
 
-*   **Complex Queries:** When dealing with deeply nested conditions or a large number of parameters.
-*   **Improved Readability:** When you want to organize your query in a human-readable and structured format.
-* **When you want to use POST** : Some times for security reasons sending information in the URL may not be desired.
-*   **Security**: When you don't want to have query params in the URL
-*   **Large paylaods:** the URL can only carry limited amount of data, so to pass large payloads it is desired to use post.
+- **Complex Queries:** When dealing with deeply nested conditions or a large number of parameters.
+- **Improved Readability:** When you want to organize your query in a human-readable and structured format.
+- **When you want to use POST** : Some times for security reasons sending information in the URL may not be desired.
+- **Security**: When you don't want to have query params in the URL
+- **Large paylaods:** the URL can only carry limited amount of data, so to pass large payloads it is desired to use post.
 
 #### Continued Support for Query Strings
 
 Remember, the original query string method, using the `q` parameter, is still fully supported and can be used interchangeably with the JSON payload method.
-
 
 ### Express Integration
 
@@ -271,9 +365,9 @@ try {
 
 For more detailed documentation, please visit:
 
-- [API Reference](docs/api.md)
-- [Query Examples](docs/examples.md)
-- [Adapters Guide](docs/adapters.md)
+- [API Reference](docs/api.md) (WIP)
+- [Query Examples](docs/examples.md) (WIP)
+- [Adapters Guide](docs/adapters.md) (WIP)
 - [Contributing Guide](CONTRIBUTING.md)
 
 ## License

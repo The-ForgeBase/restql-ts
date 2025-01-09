@@ -2,7 +2,7 @@ import { RestQLConfig, RestQLRequest } from "../types";
 import { createRestQL } from "../index";
 import { validateQuery, QueryValidationError } from "../queryValidator";
 
-function decodeQuery(queryStr: string): unknown {
+function decodeQuery(queryStr: string): any {
   try {
     return JSON.parse(Buffer.from(queryStr, "base64").toString());
   } catch {
@@ -14,7 +14,10 @@ export interface WebAdapter {
   toSQL(req: Request): Promise<{ sql: string; params: any[] }>;
 }
 
-export function createWebAdapter(config: RestQLConfig, enableJsonPayloads = false): WebAdapter {
+export function createWebAdapter(
+  config: RestQLConfig,
+  { enableJsonPayloads = false }: { enableJsonPayloads?: boolean } = {}
+): WebAdapter {
   const restql = createRestQL(config);
 
   return {
@@ -42,18 +45,29 @@ export function createWebAdapter(config: RestQLConfig, enableJsonPayloads = fals
 
       // Parse body if present
       let body: any;
-      if (enableJsonPayloads && method !== "GET" && method !== "HEAD") {
-        try {
-          const contentType = req.headers.get("content-type");
-          if (contentType?.includes("application/json")) {
-            body = await req.json();
 
-            // Use action from JSON payload as query if present
-            if (body && body.query && body.action) {
-              validateQuery(body.query);
-              queryOptions = body.query;
-              method = body.action;
-            }
+      if (method !== "GET" && method !== "HEAD") {
+        const contentType = req.headers.get("content-type");
+        if (contentType?.includes("application/json")) {
+          body = await req.json();
+        }
+      }
+
+      if (enableJsonPayloads && method === "POST" && body.query) {
+        try {
+          const { query, action } = body as {
+            query: any;
+            action: string;
+          };
+
+          // console.log("body", body);
+
+          // Use action from JSON payload as query if present
+          if (query && (action == "get" || action == "GET")) {
+            validateQuery(query);
+            queryOptions = query;
+            method = action.toUpperCase();
+            body = {};
           }
         } catch (error) {
           if (error instanceof QueryValidationError) {

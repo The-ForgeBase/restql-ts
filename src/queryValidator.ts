@@ -136,4 +136,28 @@ export function validateQuery(query: unknown): asserts query is QueryOptions {
       throw new QueryValidationError("offset must be a non-negative number");
     }
   }
+
+  // if any of the above is not in the query, throw an error
+  if (Object.keys(query).length === 0) {
+    throw new QueryValidationError("Query is empty");
+  }
+
+  // if the query is not empty, but contains non-query options, throw an error
+  if (
+    Object.keys(query).some(
+      (key) =>
+        ![
+          "select",
+          "where",
+          "joins",
+          "orderBy",
+          "groupBy",
+          "having",
+          "limit",
+          "offset",
+        ].includes(key)
+    )
+  ) {
+    throw new QueryValidationError("Invalid query options");
+  }
 }

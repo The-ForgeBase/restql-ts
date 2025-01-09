@@ -15,7 +15,10 @@ export interface FastifyAdapter {
   toSQL(req: FastifyRequest): Promise<{ sql: string; params: any[] }>;
 }
 
-export function createFastifyAdapter(config: RestQLConfig): FastifyAdapter {
+export function createFastifyAdapter(
+  config: RestQLConfig,
+  { enableJsonPayloads = false }: { enableJsonPayloads?: boolean } = {}
+): FastifyAdapter {
   const restql = createRestQL(config);
 
   return {
@@ -39,19 +42,27 @@ export function createFastifyAdapter(config: RestQLConfig): FastifyAdapter {
           );
         }
       }
+
       // Parse JSON body for POST requests
-      else if (method === "POST" && req.body && typeof req.body === "object") {
-        const body = req.body as Record<string, any>;
-        if (body.action && body.query && body.action) {
+      else if (method === "POST" && enableJsonPayloads && req.body) {
+        const body = req.body as any;
+        if (
+          body.action &&
+          body.query &&
+          (body.action == "get" || body.action == "GET")
+        ) {
           try {
             validateQuery(body.query);
             queryOptions = body.query;
-            method = body.action;
+            method = body.action.toUpperCase();
+            req.body = {};
           } catch (error) {
             if (error instanceof QueryValidationError) {
               throw error;
             }
-            throw new QueryValidationError(error instanceof Error ? error.message : "Unknown error");
+            throw new QueryValidationError(
+              error instanceof Error ? error.message : "Unknown error"
+            );
           }
         }
       }

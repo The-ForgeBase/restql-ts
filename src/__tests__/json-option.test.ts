@@ -2,13 +2,12 @@ import { createWebAdapter } from "../adapters/web";
 import { QueryValidationError } from "../queryValidator";
 
 describe("Web Adapter", () => {
-  const adapter = createWebAdapter({
-    dialect: "postgres",
-  });
-
-  function encodeQuery(query: any): string {
-    return Buffer.from(JSON.stringify(query)).toString("base64");
-  }
+  const adapter = createWebAdapter(
+    {
+      dialect: "postgres",
+    },
+    { enableJsonPayloads: true }
+  );
 
   function createRequest(
     path: string,
@@ -18,13 +17,11 @@ describe("Web Adapter", () => {
       body?: any;
     } = {}
   ): Request {
-    const { method = "GET", query, body } = options;
+    let { method = "POST", query, body } = options;
     const url = new URL(`http://test.com${path}`);
 
-    if (query) {
-      const encodedQuery = encodeQuery(query);
-      // console.log("encodedQuery", encodedQuery);
-      url.searchParams.set("q", encodedQuery);
+    if (query && !body) {
+      body = { query: query, action: "GET" };
     }
 
     // console.log("url", url);
