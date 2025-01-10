@@ -1,6 +1,6 @@
 import { RestQLRequest, ParsedRequest, QueryOptions } from "./types";
 import { parseQuery } from "./queryParser";
-import { ValidationOptions } from "./validation";
+import { validateAndSanitizeQuery, ValidationOptions } from "./validation";
 
 export function parseRequest(
   request: RestQLRequest,
@@ -11,8 +11,15 @@ export function parseRequest(
   const table = pathParts[0];
   const id = pathParts[1];
 
+  let finalQuery: QueryOptions = {};
   // Use the decoded query directly
   const queryOptions = query as unknown as QueryOptions;
+
+  if (validationOptions) {
+    finalQuery = validateAndSanitizeQuery(queryOptions, validationOptions);
+  } else {
+    finalQuery = queryOptions;
+  }
 
   switch (method) {
     case "POST":

@@ -1,6 +1,6 @@
 import { FastifyRequest } from "fastify";
-import { RestQLConfig, RestQLRequest } from "../types";
-import { createRestQL } from "../index";
+import { RestQLRequest } from "../types";
+import { createRestQL, RestQLOptions } from "../index";
 import { validateQuery, QueryValidationError } from "../queryValidator";
 
 function decodeQuery(queryStr: string): unknown {
@@ -16,7 +16,7 @@ export interface FastifyAdapter {
 }
 
 export function createFastifyAdapter(
-  config: RestQLConfig,
+  config: RestQLOptions,
   { enableJsonPayloads = false }: { enableJsonPayloads?: boolean } = {}
 ): FastifyAdapter {
   const restql = createRestQL(config);

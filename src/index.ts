@@ -7,8 +7,13 @@ export * from "./validation";
 import { RestQLConfig, RestQLRequest, RestQLResponse } from "./types";
 import { parseRequest } from "./parser";
 import { SQLBuilder } from "./sqlBuilder";
-import { ValidationOptions } from "./validation";
+import {
+  SAFE_FIELD_PATTERN,
+  ValidationOptions,
+  validateAndSanitizeQuery,
+} from "./validation";
 import { QueryValidationError } from "./queryValidator";
+import { Operator, LogicalOperator } from "./types";
 
 export interface RestQLOptions extends RestQLConfig {
   validation?: ValidationOptions;
@@ -42,3 +47,31 @@ export function decodeQuery(queryStr: string): unknown {
     throw new QueryValidationError("Invalid base64 or JSON format");
   }
 }
+
+export const defaultValidationOptions: ValidationOptions = {
+  maxQueryDepth: 5,
+  maxConditionsPerGroup: 5,
+  maxSelectFields: 20,
+  maxGroupByFields: 5,
+  allowedOperators: [
+    "=",
+    "!=",
+    ">",
+    "<",
+    ">=",
+    "<=",
+    "LIKE",
+    "NOT LIKE",
+    "IN",
+    "NOT IN",
+    "IS NULL",
+    "IS NOT NULL",
+    "BETWEEN",
+    "REGEXP",
+    "NOT REGEXP",
+  ] as Operator[],
+  allowedLogicalOperators: ["AND", "OR"] as LogicalOperator[],
+  allowedFieldPattern: SAFE_FIELD_PATTERN,
+  maxValueLength: 1000,
+  preventSqlKeywords: true,
+};

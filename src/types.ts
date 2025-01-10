@@ -20,7 +20,7 @@ export interface RestQLRequest {
   method: HttpMethod;
   path: string;
   body?: any;
-  query?: Record<string, string>;
+  query?: Record<string, string> | any;
 }
 
 export interface RestQLResponse {

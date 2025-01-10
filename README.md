@@ -262,6 +262,29 @@ app.get("/users", async (req, res) => {
 });
 ```
 
+### Fastify Integration
+
+```typescript
+import { createFastifyAdapter } from "restql-ts/adapters";
+
+const adapter = createFastifyAdapter({
+  dialect: "postgres",
+  validation: defaultValidationOptions,
+});
+
+fastify.addHook("preHandler", async (request, reply) => {
+  try {
+    const { sql, params } = await adapter.toSQL(request);
+    // Execute query...
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      throw new Error(error.message);
+    }
+    throw error;
+  }
+});
+```
+
 ### Complex Queries
 
 ```typescript
@@ -293,6 +316,69 @@ const query = {
   limit: 10,
   offset: 0,
 };
+```
+
+## Security Features
+
+The library includes comprehensive SQL injection prevention:
+
+```typescript
+import { defaultValidationOptions } from "restql-ts";
+
+const secureRestQL = createRestQL({
+  dialect: "postgres",
+  validation: {
+    ...defaultValidationOptions,
+    maxQueryDepth: 3, // Limit query complexity
+    maxConditionsPerGroup: 5, // Limit conditions per group
+    maxSelectFields: 20, // Limit number of fields
+    maxGroupByFields: 5, // Limit GROUP BY fields
+    maxValueLength: 1000, // Limit value length
+    preventSqlKeywords: true, // Prevent SQL keywords in values
+    allowedOperators: ["=", "!=", ">", "<"], // Restrict operators
+    allowedLogicalOperators: ["AND", "OR"], // Restrict logical operators
+    allowedFieldPattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, // Restrict field names
+  },
+});
+```
+
+### Security Validations
+
+Field Name Protection:
+Validates against SQL injection patterns
+Prevents SQL keywords in field names
+Enforces safe character patterns
+
+Value Protection:
+Validates against SQL injection attempts
+Prevents dangerous characters
+Length limits
+SQL keyword prevention
+
+Table Name Protection:
+Strict table name pattern validation
+Prevents SQL keywords in table names
+Length limits on table names
+
+Query Structure Protection:
+Depth limits for nested queries
+Condition count limits
+Field count limits
+
+### Validation Options
+
+```typescript
+interface ValidationOptions {
+  maxQueryDepth?: number; // Maximum depth of nested conditions
+  maxConditionsPerGroup?: number; // Maximum conditions in a WHERE group
+  maxSelectFields?: number; // Maximum fields in SELECT
+  maxGroupByFields?: number; // Maximum fields in GROUP BY
+  allowedOperators?: Operator[]; // Allowed comparison operators
+  allowedLogicalOperators?: LogicalOperator[]; // Allowed logical operators
+  allowedFieldPattern?: RegExp; // Pattern for valid field names
+  maxValueLength?: number; // Maximum length for values
+  preventSqlKeywords?: boolean; // Prevent SQL keywords in values
+}
 ```
 
 ## Query Structure

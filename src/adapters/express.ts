@@ -1,6 +1,6 @@
 import { Request } from "express";
-import { RestQLConfig, RestQLRequest } from "../types";
-import { createRestQL } from "../index";
+import { RestQLRequest } from "../types";
+import { createRestQL, RestQLOptions } from "../index";
 import { validateQuery, QueryValidationError } from "../queryValidator";
 
 function decodeQuery(queryStr: string): unknown {
@@ -16,7 +16,7 @@ export interface ExpressAdapter {
 }
 
 export function createExpressAdapter(
-  config: RestQLConfig,
+  config: RestQLOptions,
   { enableJsonPayloads = false }: { enableJsonPayloads?: boolean } = {}
 ): ExpressAdapter {
   const restql = createRestQL(config);

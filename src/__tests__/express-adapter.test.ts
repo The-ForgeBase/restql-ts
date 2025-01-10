@@ -1,10 +1,12 @@
 import { Request } from "express";
 import { createExpressAdapter } from "../adapters/express";
 import { QueryValidationError } from "../queryValidator";
+import { defaultValidationOptions } from "..";
 
 describe("Express Adapter", () => {
   const adapter = createExpressAdapter({
     dialect: "postgres",
+    validation: defaultValidationOptions,
   });
 
   function createMockRequest(options: {

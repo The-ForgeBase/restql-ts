@@ -1,5 +1,5 @@
-import { RestQLConfig, RestQLRequest } from "../types";
-import { createRestQL } from "../index";
+import { RestQLRequest } from "../types";
+import { createRestQL, RestQLOptions } from "../index";
 import { validateQuery, QueryValidationError } from "../queryValidator";
 
 function decodeQuery(queryStr: string): any {
@@ -15,7 +15,7 @@ export interface WebAdapter {
 }
 
 export function createWebAdapter(
-  config: RestQLConfig,
+  config: RestQLOptions,
   { enableJsonPayloads = false }: { enableJsonPayloads?: boolean } = {}
 ): WebAdapter {
   const restql = createRestQL(config);
